@@ -204,32 +204,89 @@ GET /api/v1/dashboard/inventory-alerts
 
 ```
 .
-├── services/
-│   ├── product/
+├── services/                 # Thư mục chứa các microservices
+│   ├── product/             # Product Service
 │   │   ├── cmd/
-│   │   │   └── main.go        # Single entry point cho cả REST & gRPC
+│   │   │   └── main.go     # Entry point
 │   │   ├── internal/
-│   │   │   ├── server/
-│   │   │   │   ├── grpc.go    # gRPC implementation
-│   │   │   │   └── rest.go    # REST handlers
-│   │   │   ├── domain/        # Domain objects & logic
-│   │   │   └── service/       # Business logic
-│   │   └── proto/
-│   │       └── product.proto  # API definitions
+│   │   │   ├── application/
+│   │   │   │   ├── dto/
+│   │   │   │   │   └── product_dto.go
+│   │   │   │   └── services/
+│   │   │   │       └── product_service.go
+│   │   │   ├── domain/
+│   │   │   │   ├── entities/
+│   │   │   │   │   └── product.go
+│   │   │   │   └── interfaces/
+│   │   │   │       ├── product_repository.go
+│   │   │   │       └── product_service.go
+│   │   │   └── infrastructure/
+│   │   │       ├── di/
+│   │   │       │   └── wire.go
+│   │   │       ├── query/
+│   │   │       │   ├── gen/
+│   │   │       │   └── product.sql
+│   │   │       ├── repositories/
+│   │   │       │   └── product_repository.go
+│   │   │       ├── grpc/
+│   │   │       │   └── product_handler.go
+│   │   │       └── rest/
+│   │   │           └── product_handler.go
+│   │   ├── proto/
+│   │   │   └── product.proto
+│   │   ├── Dockerfile
+│   │   └── Makefile
 │   ├── inventory/
 │   ├── order/
 │   ├── user/
 │   ├── cart/
 │   └── payment/
-├── pkg/                      # Shared packages
-│   ├── auth/
-│   ├── database/
-│   ├── logger/
+├── shared/                   # Shared packages giữa các services
+│   ├── common/              # Common utilities & helpers
 │   └── messaging/
-└── deploy/
+│       └── nats/
+├── plugins/                  # Component packages
+│   ├── cache/
+│   │   └── redis/
+│   ├── database/
+│   │   └── postgres/
+│   └── queue/
+│       └── nats/
+└── deploy/                   # Deployment configurations
     ├── docker/
     └── k8s/
 ```
+
+## Layer Architecture
+
+Mỗi service được tổ chức theo Clean Architecture với các layer:
+
+### 1. Domain Layer (`internal/domain/`)
+- **Entities**: Business objects và logic
+- **Interfaces**: Định nghĩa contracts cho repositories và services
+- Không phụ thuộc vào bất kỳ layer nào khác
+
+### 2. Application Layer (`internal/application/`)
+- **DTOs**: Data Transfer Objects
+- **Services**: Implementation của business use cases
+- Chỉ phụ thuộc vào Domain layer
+
+### 3. Infrastructure Layer (`internal/infrastructure/`)
+- **Repositories**: Database implementations
+- **Transport**: gRPC và REST handlers
+- **DI**: Dependency injection configuration
+- **Query**: SQL queries và generated code
+
+## Shared Packages (`shared/`)
+Chứa các package dùng chung giữa các services:
+- **common**: Utilities và helpers
+- **messaging**: Message broker implementations
+
+## Plugins (`plugins/`)
+Chứa các implementation của third-party components:
+- **cache**: Redis implementations
+- **database**: Database drivers và config
+- **queue**: Message queue implementations
 
 ### schema
 ```prisma
