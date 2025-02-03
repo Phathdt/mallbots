@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"github.com/phathdt/service-context/component/validation"
 	"mallbots/modules/user/application/dto"
 	"mallbots/modules/user/domain/interfaces"
 	"net/http"
@@ -23,6 +24,10 @@ func (h *UserHandler) Register(c *fiber.Ctx) error {
 		return err
 	}
 
+	if err := validation.Validate(req); err != nil {
+		panic(err)
+	}
+
 	token, err := h.service.Register(c.Context(), &req)
 	if err != nil {
 		panic(err)
@@ -35,6 +40,10 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	var req dto.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return err
+	}
+
+	if err := validation.Validate(req); err != nil {
+		panic(err)
 	}
 
 	token, err := h.service.Login(c.Context(), &req)
