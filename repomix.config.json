@@ -1,0 +1,26 @@
+{
+  "output": {
+    "filePath": "repomix-output.txt",
+    "style": "plain",
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "topFilesLength": 5,
+    "showLineNumbers": false,
+    "copyToClipboard": false
+  },
+  "include": [],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "./prisma/migrations/",
+      "**/*_test.go",
+      "schema.gen.sql",
+      "config/config.yml",
+      "go.sum"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

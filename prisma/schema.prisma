@@ -1,0 +1,33 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_DSN")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement()) @map("id")
+  productId   String   @unique @map("product_id")
+  name        String   @map("name")
+  description String?  @map("description")
+  price       Float    @map("price")
+  images      String[] @map("images")
+  categoryId  Int      @map("category_id")
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([categoryId])
+  @@map("products")
+}
+
+model Category {
+  id         Int       @id @default(autoincrement()) @map("id")
+  categoryId String    @unique @map("category_id")
+  name       String    @map("name")
+  products   Product[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("categories")
+}
