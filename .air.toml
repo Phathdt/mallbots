@@ -8,6 +8,7 @@ exclude_dir = [
   "tmp",
   "vendor",
   ".git",
+  ".idea",
   "prisma/migrations",
   "modules/contracts",
 ]
