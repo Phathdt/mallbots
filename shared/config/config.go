@@ -9,9 +9,8 @@ import (
 )
 
 type Config struct {
-	Token   TokenConfig   `yaml:"token"`
-	Solver  SolverConfig  `yaml:"solver"`
-	Watcher WatcherConfig `yaml:"watcher"`
+	Token  TokenConfig  `yaml:"token"`
+	Solver SolverConfig `yaml:"solver"`
 }
 
 type TokenConfig struct {
@@ -21,13 +20,6 @@ type TokenConfig struct {
 
 type SolverConfig struct {
 	SolverURL string `yaml:"solver_url"`
-}
-
-type WatcherConfig struct {
-	RpcURL          string `yaml:"rpc_url"`
-	ContractAddress string `yaml:"contract_address"`
-	RedisURL        string `yaml:"redis_url"`
-	PollingDelay    int    `yaml:"polling_delay"`
 }
 
 // LoadConfig reads and parses the YAML configuration file

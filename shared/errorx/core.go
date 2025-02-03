@@ -8,4 +8,5 @@ var (
 	ErrCreateUser        = errors.New("create user failed")
 	ErrPasswordNotMatch  = errors.New("password not match")
 	ErrGenToken          = errors.New("when gen token")
+	ErrCannotLogin       = errors.New("cannot login")
 )

@@ -3,7 +3,8 @@ package cmd
 import (
 	"log"
 	"log/slog"
-	"mallbots/modules/product/infrastructure/di"
+	productDi "mallbots/modules/product/infrastructure/di"
+	userDi "mallbots/modules/user/infrastructure/di"
 	"mallbots/plugins/pgxc"
 	"mallbots/shared/common"
 	"mallbots/shared/config"
@@ -20,7 +21,12 @@ import (
 func StartRouter(sc sctx.ServiceContext, cfg *config.Config) {
 	dbPool := sc.MustGet(common.KeyPgx).(pgxc.PgxComp).GetConn()
 
-	productHandler, err := di.InitializeProductHandler(dbPool)
+	productHandler, err := productDi.InitializeProductHandler(dbPool)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	userHandler, err := userDi.InitializeUserHandler(dbPool)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,6 +43,11 @@ func StartRouter(sc sctx.ServiceContext, cfg *config.Config) {
 	// Setup routes
 	app.Get("/v1/products", productHandler.GetProducts)
 	app.Get("/v1/products/:id", productHandler.GetProduct)
+
+	// User routes
+	app.Post("/v1/auth/register", userHandler.Register)
+	app.Post("/v1/auth/login", userHandler.Login)
+	app.Get("/v1/users/me", userHandler.GetProfile)
 
 	_ = app.Listen(":4000")
 }

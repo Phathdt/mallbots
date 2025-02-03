@@ -1,0 +1,58 @@
+package rest
+
+import (
+	"mallbots/modules/user/application/dto"
+	"mallbots/modules/user/domain/interfaces"
+	"net/http"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/phathdt/service-context/core"
+)
+
+type UserHandler struct {
+	service interfaces.UserService
+}
+
+func NewUserHandler(service interfaces.UserService) *UserHandler {
+	return &UserHandler{service: service}
+}
+
+func (h *UserHandler) Register(c *fiber.Ctx) error {
+	var req dto.RegisterRequest
+	if err := c.BodyParser(&req); err != nil {
+		return err
+	}
+
+	user, err := h.service.Register(c.Context(), &req)
+	if err != nil {
+		panic(err)
+	}
+
+	return c.Status(http.StatusCreated).JSON(core.SimpleSuccessResponse(user))
+}
+
+func (h *UserHandler) Login(c *fiber.Ctx) error {
+	var req dto.LoginRequest
+	if err := c.BodyParser(&req); err != nil {
+		return err
+	}
+
+	token, err := h.service.Login(c.Context(), &req)
+	if err != nil {
+		panic(err)
+	}
+
+	return c.Status(http.StatusOK).JSON(core.SimpleSuccessResponse(token))
+}
+
+func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
+	// TODO: Get user ID from JWT token
+	userID := int32(1)
+
+	profile, err := h.service.GetProfile(c.Context(), userID)
+	if err != nil {
+		panic(err)
+	}
+
+	return c.Status(http.StatusOK).JSON(core.SimpleSuccessResponse(profile))
+}

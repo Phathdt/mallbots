@@ -28,3 +28,17 @@ model Category {
 
   @@map("categories")
 }
+
+model User {
+  id       Int    @id @default(autoincrement()) @map("id")
+  email    String @unique @map("email")
+  password String @map("password")
+  fullName String @map("full_name")
+  role     String @default("USER") @map("role")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@map("users")
+}

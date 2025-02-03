@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"mallbots/plugins/jwtc"
 	"mallbots/plugins/pgxc"
 	"mallbots/shared/common"
 	"mallbots/shared/config"
@@ -21,6 +22,7 @@ func newServiceCtx() sctx.ServiceContext {
 	return sctx.NewServiceContext(
 		sctx.WithName(serviceName),
 		sctx.WithComponent(pgxc.New(common.KeyPgx, "")),
+		sctx.WithComponent(jwtc.New(common.KeyJwt)),
 	)
 }
 
