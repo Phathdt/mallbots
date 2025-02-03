@@ -5,36 +5,38 @@ import (
 	"mallbots/modules/user/application/dto"
 	"mallbots/modules/user/domain/entities"
 	"mallbots/modules/user/domain/interfaces"
+	"mallbots/plugins/tokenprovider"
+	"mallbots/shared/common"
 	"mallbots/shared/errorx"
 	"time"
 
+	"github.com/jaevor/go-nanoid"
+	"github.com/phathdt/service-context/core"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type Hasher interface {
-	VerifyMessage(message string, signedMessage string) (string, error)
-}
-
 type UserService struct {
-	repo interfaces.UserRepository
+	repo          interfaces.UserRepository
+	tokenProvider tokenprovider.Provider
 }
 
-func NewUserService(repo interfaces.UserRepository) interfaces.UserService {
+func NewUserService(repo interfaces.UserRepository, tokenProvider tokenprovider.Provider) interfaces.UserService {
 	return &UserService{
-		repo: repo,
+		repo:          repo,
+		tokenProvider: tokenProvider,
 	}
 }
 
-func (s *UserService) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.UserResponse, error) {
+func (s *UserService) Register(ctx context.Context, req *dto.RegisterRequest) (string, error) {
 	// Check if user already exists
 	if existingUser, _ := s.repo.GetByEmail(ctx, req.Email); existingUser != nil {
-		return nil, errorx.ErrUserAlreadyExists
+		return "", errorx.ErrUserAlreadyExists
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	user := &entities.User{
@@ -47,16 +49,27 @@ func (s *UserService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 
 	newUser, err := s.repo.Create(ctx, user)
 	if err != nil {
-		return nil, errorx.ErrCreateUser
+		return "", errorx.ErrCreateUser
 	}
 
-	return &dto.UserResponse{
-		ID:        newUser.ID,
-		Email:     newUser.Email,
-		FullName:  newUser.FullName,
-		CreatedAt: newUser.CreatedAt,
-		UpdatedAt: newUser.UpdatedAt,
-	}, nil
+	canonicID, _ := nanoid.Standard(21)
+	subToken := canonicID()
+
+	payload := common.TokenPayload{
+		UserId:   newUser.ID,
+		Email:    newUser.Email,
+		SubToken: subToken,
+	}
+
+	expiredTime := 3600 * 24 * 30
+	accessToken, err := s.tokenProvider.Generate(&payload, expiredTime)
+	if err != nil {
+		return "", core.ErrBadRequest.
+			WithError(errorx.ErrGenToken.Error()).
+			WithDebug(err.Error())
+	}
+
+	return accessToken.GetToken(), nil
 }
 
 func (s *UserService) Login(ctx context.Context, req *dto.LoginRequest) (string, error) {
@@ -65,14 +78,28 @@ func (s *UserService) Login(ctx context.Context, req *dto.LoginRequest) (string,
 		return "", errorx.ErrCannotGetUser
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		return "", errorx.ErrPasswordNotMatch
 	}
 
-	// TODO: Generate JWT token
-	token := "dummy-token"
+	canonicID, _ := nanoid.Standard(21)
+	subToken := canonicID()
 
-	return token, nil
+	payload := common.TokenPayload{
+		UserId:   user.ID,
+		Email:    user.Email,
+		SubToken: subToken,
+	}
+
+	expiredTime := 3600 * 24 * 30
+	accessToken, err := s.tokenProvider.Generate(&payload, expiredTime)
+	if err != nil {
+		return "", core.ErrBadRequest.
+			WithError(errorx.ErrGenToken.Error()).
+			WithDebug(err.Error())
+	}
+
+	return accessToken.GetToken(), nil
 }
 
 func (s *UserService) GetProfile(ctx context.Context, userID int32) (*dto.UserResponse, error) {

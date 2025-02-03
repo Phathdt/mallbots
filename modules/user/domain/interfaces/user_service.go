@@ -6,7 +6,7 @@ import (
 )
 
 type UserService interface {
-	Register(ctx context.Context, req *dto.RegisterRequest) (*dto.UserResponse, error)
+	Register(ctx context.Context, req *dto.RegisterRequest) (string, error)
 	Login(ctx context.Context, req *dto.LoginRequest) (string, error)
 	GetProfile(ctx context.Context, userID int32) (*dto.UserResponse, error)
 }

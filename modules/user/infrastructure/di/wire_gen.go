@@ -12,13 +12,14 @@ import (
 	"mallbots/modules/user/application/services"
 	"mallbots/modules/user/infrastructure/repositories"
 	"mallbots/modules/user/infrastructure/rest"
+	"mallbots/plugins/tokenprovider"
 )
 
 // Injectors from wire.go:
 
-func InitializeUserHandler(db *pgxpool.Pool) (*rest.UserHandler, error) {
+func InitializeUserHandler(db *pgxpool.Pool, provider tokenprovider.Provider) (*rest.UserHandler, error) {
 	userRepository := repositories.NewUserRepository(db)
-	userService := services.NewUserService(userRepository)
+	userService := services.NewUserService(userRepository, provider)
 	userHandler := rest.NewUserHandler(userService)
 	return userHandler, nil
 }

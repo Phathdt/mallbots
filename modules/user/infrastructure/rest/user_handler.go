@@ -23,12 +23,12 @@ func (h *UserHandler) Register(c *fiber.Ctx) error {
 		return err
 	}
 
-	user, err := h.service.Register(c.Context(), &req)
+	token, err := h.service.Register(c.Context(), &req)
 	if err != nil {
 		panic(err)
 	}
 
-	return c.Status(http.StatusCreated).JSON(core.SimpleSuccessResponse(user))
+	return c.Status(http.StatusCreated).JSON(core.SimpleSuccessResponse(token))
 }
 
 func (h *UserHandler) Login(c *fiber.Ctx) error {
@@ -46,8 +46,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
-	// TODO: Get user ID from JWT token
-	userID := int32(1)
+	userID := c.Context().UserValue("userId").(int32)
 
 	profile, err := h.service.GetProfile(c.Context(), userID)
 	if err != nil {

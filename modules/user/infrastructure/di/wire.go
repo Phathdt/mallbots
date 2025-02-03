@@ -6,6 +6,7 @@ import (
 	"mallbots/modules/user/application/services"
 	"mallbots/modules/user/infrastructure/repositories"
 	"mallbots/modules/user/infrastructure/rest"
+	"mallbots/plugins/tokenprovider"
 
 	"github.com/google/wire"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,7 +18,7 @@ var UserSet = wire.NewSet(
 	rest.NewUserHandler,
 )
 
-func InitializeUserHandler(db *pgxpool.Pool) (*rest.UserHandler, error) {
+func InitializeUserHandler(db *pgxpool.Pool, provider tokenprovider.Provider) (*rest.UserHandler, error) {
 	wire.Build(UserSet)
 	return &rest.UserHandler{}, nil
 }
