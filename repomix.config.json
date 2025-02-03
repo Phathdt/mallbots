@@ -15,7 +15,9 @@
     "customPatterns": [
       "**/*.md",
       "./prisma/migrations/",
+      "**/*_test.go",
       "schema.gen.sql",
+      "**/*.sql.go",
       "config/config.yml",
       "go.sum",
       "prisma/migrations"

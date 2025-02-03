@@ -52,24 +52,7 @@ func (s *UserService) Register(ctx context.Context, req *dto.RegisterRequest) (s
 		return "", errorx.ErrCreateUser
 	}
 
-	canonicID, _ := nanoid.Standard(21)
-	subToken := canonicID()
-
-	payload := common.TokenPayload{
-		UserId:   newUser.ID,
-		Email:    newUser.Email,
-		SubToken: subToken,
-	}
-
-	expiredTime := 3600 * 24 * 30
-	accessToken, err := s.tokenProvider.Generate(&payload, expiredTime)
-	if err != nil {
-		return "", core.ErrBadRequest.
-			WithError(errorx.ErrGenToken.Error()).
-			WithDebug(err.Error())
-	}
-
-	return accessToken.GetToken(), nil
+	return s.generateToken(newUser)
 }
 
 func (s *UserService) Login(ctx context.Context, req *dto.LoginRequest) (string, error) {
@@ -82,6 +65,25 @@ func (s *UserService) Login(ctx context.Context, req *dto.LoginRequest) (string,
 		return "", errorx.ErrPasswordNotMatch
 	}
 
+	return s.generateToken(user)
+}
+
+func (s *UserService) GetProfile(ctx context.Context, userID int32) (*dto.UserResponse, error) {
+	user, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, errorx.ErrCannotGetUser
+	}
+
+	return &dto.UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		FullName:  user.FullName,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	}, nil
+}
+
+func (s *UserService) generateToken(user *entities.User) (string, error) {
 	canonicID, _ := nanoid.Standard(21)
 	subToken := canonicID()
 
@@ -100,19 +102,4 @@ func (s *UserService) Login(ctx context.Context, req *dto.LoginRequest) (string,
 	}
 
 	return accessToken.GetToken(), nil
-}
-
-func (s *UserService) GetProfile(ctx context.Context, userID int32) (*dto.UserResponse, error) {
-	user, err := s.repo.GetByID(ctx, userID)
-	if err != nil {
-		return nil, errorx.ErrCannotGetUser
-	}
-
-	return &dto.UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		FullName:  user.FullName,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-	}, nil
 }
