@@ -1,650 +1,220 @@
-# Mallbots Microservices
+# E-commerce Pet Project
 
-Hệ thống E-commerce dựa trên Microservices Architecture với DDD (Domain-Driven Design), Clean Architecture và Event-Driven Design.
+Hệ thống E-commerce đơn giản, có thể mở rộng thành microservices sau này.
 
-## Tech Stack
+## Phase 1: Monolith Setup (2-3 tuần đầu)
 
+### Tech Stack
 - **Backend**: Golang
 - **Database**: PostgreSQL
-- **Cache**: Redis
-- **Message Broker**: NATS JetStream
-- **RPC**: gRPC (với buf)
-- **Container**: Docker & Docker Compose
-- **Gateway**: Traefik
+- **Cache**: Redis (optional)
+- **API Style**: RESTful
 
-## System Architecture
-
+### System Architecture (Initial)
 ```mermaid
 graph TB
-    Client[Client Apps] --> Traefik
-    Admin[Admin Panel] --> Traefik
+    Client[Web/Mobile Client] --> API[REST API]
+    API --> Services[Core Services]
+    Services --> DB[(PostgreSQL)]
+    Services --> Cache[(Redis)]
 
-    Traefik --> PublicAPI[Public API<br/>api.localhost]
-    Traefik --> AdminAPI[Admin API<br/>admin.localhost]
-
-    subgraph Services
-        PublicAPI --> ProductSvc[Product Service]
-        PublicAPI --> UserSvc[User Service]
-        PublicAPI --> CartSvc[Cart Service]
-        PublicAPI --> OrderSvc[Order Service]
-
-        AdminAPI --> ProductSvc
-        AdminAPI --> InventorySvc[Inventory Service]
-
-        subgraph Internal Process
-            REST[REST Handler] --> GRPC[gRPC Handler]
-        end
+    subgraph Core Services
+        ProductService[Product Module]
+        UserService[User Module]
+        OrderService[Order Module]
     end
-
-    subgraph Events[NATS JetStream]
-        MessageBroker[Message Broker]
-    end
-
-    ProductSvc --> MessageBroker
-    InventorySvc --> MessageBroker
-    OrderSvc --> MessageBroker
-    CartSvc --> MessageBroker
-    UserSvc --> MessageBroker
-    PaymentSvc --> MessageBroker
-    MessageBroker --> NotificationService[Notification Service]
 ```
 
-## API Documentation
+### Core Features
+1. User Module:
+   - Đăng ký, đăng nhập
+   - Quản lý profile
 
-### Public APIs (api.localhost)
+2. Product Module:
+   - Danh sách sản phẩm
+   - Chi tiết sản phẩm
+   - Tìm kiếm đơn giản
 
-#### 1. User Service (Public)
-```
-REST APIs:
-POST /api/v1/auth/signup
-POST /api/v1/auth/login
-GET /api/v1/users/me
-PUT /api/v1/users/me
+3. Order Module:
+   - Giỏ hàng
+   - Đặt hàng
+   - Xem lịch sử đơn hàng
 
-gRPC Internal APIs:
-- ValidateToken(token) returns (UserInfo)
-- GetUserById(id) returns (User)
-```
-
-#### 2. Product Service (Public)
-```
-REST APIs:
-GET /api/v1/products
-GET /api/v1/products/{id}
-GET /api/v1/products/search
-GET /api/v1/categories
-GET /api/v1/categories/{id}
-GET /api/v1/categories/{id}/products
-
-gRPC Internal:
-- GetProductPrice(productId) returns (Price)
-- GetProductStock(productId) returns (Stock)
-```
-
-#### 3. Cart Service (Public)
-```
-REST APIs:
-GET /api/v1/cart
-POST /api/v1/cart/items
-PUT /api/v1/cart/items/{id}
-DELETE /api/v1/cart/items/{id}
-POST /api/v1/cart/checkout
-
-gRPC Internal APIs:
-- ValidateCart(cartId) returns (CartValidation)
-- GetCartById(cartId) returns (Cart)
-```
-
-#### 4. Order Service (Public)
-```
-REST APIs:
-GET /api/v1/orders
-GET /api/v1/orders/{id}
-POST /api/v1/orders/{id}/cancel
-GET /api/v1/orders/{id}/status
-
-gRPC Internal APIs:
-- UpdateOrderStatus(orderId, status)
-- GetOrderById(orderId) returns (Order)
-```
-
-#### 5. Inventory Service (Internal)
-```
-gRPC APIs only:
-- CheckStock(productId) returns (StockInfo)
-- ReserveStock(productId, quantity) returns (Reservation)
-- ReleaseStock(reservationId)
-- UpdateStock(productId, quantity)
-```
-
-#### 6. Payment Service (Internal)
-```
-gRPC APIs only:
-- ProcessPayment(orderId, amount) returns (PaymentResult)
-- RefundPayment(paymentId) returns (RefundResult)
-- GetPaymentStatus(paymentId) returns (PaymentStatus)
-```
-
-
-### Admin APIs (admin.localhost)
-
-#### 1. Product Management
-```
-POST /api/v1/products
-    Request:
-    {
-        "name": "Product Name",
-        "description": "Description",
-        "price": 99.99,
-        "images": ["url1", "url2"],
-        "categoryId": "cat-1"
-    }
-
-PUT /api/v1/products/{id}
-DELETE /api/v1/products/{id}
-GET /api/v1/products  # With admin filters
-```
-
-#### 2. Category Management
-```
-POST /api/v1/categories
-PUT /api/v1/categories/{id}
-DELETE /api/v1/categories/{id}
-GET /api/v1/categories
-```
-
-#### 3. Inventory Management
-```
-PUT /api/v1/inventory/{productId}/stock
-    Request:
-    {
-        "quantity": 100,
-        "type": "SET|ADD|SUBTRACT"
-    }
-
-POST /api/v1/inventory/batch-update
-    Request:
-    {
-        "items": [
-            {
-                "productId": "prod-1",
-                "quantity": 100
-            }
-        ]
-    }
-```
-
-#### 4. Order Management
-```
-GET /api/v1/orders
-PUT /api/v1/orders/{id}/status
-    Request:
-    {
-        "status": "CONFIRMED|SHIPPED|DELIVERED"
-    }
-```
-
-#### 5. Dashboard APIs
-```
-GET /api/v1/dashboard/stats
-    Response:
-    {
-        "totalOrders": 1000,
-        "totalRevenue": 99999.99,
-        "totalUsers": 500,
-        "pendingOrders": 50
-    }
-
-GET /api/v1/dashboard/sales
-GET /api/v1/dashboard/top-products
-GET /api/v1/dashboard/inventory-alerts
-```
-
-## Project Structure
-
+### Project Structure
 ```
 .
-├── services/                 # Thư mục chứa các microservices
-│   ├── product/             # Product Service
-│   │   ├── cmd/
-│   │   │   └── main.go     # Entry point
-│   │   ├── internal/
-│   │   │   ├── application/
-│   │   │   │   ├── dto/
-│   │   │   │   │   └── product_dto.go
-│   │   │   │   └── services/
-│   │   │   │       └── product_service.go
-│   │   │   ├── domain/
-│   │   │   │   ├── entities/
-│   │   │   │   │   └── product.go
-│   │   │   │   └── interfaces/
-│   │   │   │       ├── product_repository.go
-│   │   │   │       └── product_service.go
-│   │   │   └── infrastructure/
-│   │   │       ├── di/
-│   │   │       │   └── wire.go
-│   │   │       ├── query/
-│   │   │       │   ├── gen/
-│   │   │       │   └── product.sql
-│   │   │       ├── repositories/
-│   │   │       │   └── product_repository.go
-│   │   │       ├── grpc/
-│   │   │       │   └── product_handler.go
-│   │   │       └── rest/
-│   │   │           └── product_handler.go
-│   │   ├── proto/
-│   │   │   └── product.proto
-│   │   ├── Dockerfile
-│   │   └── Makefile
-│   ├── inventory/
-│   ├── order/
+├── cmd/
+│   └── server/
+│       └── main.go                # Entry point
+├── modules/
 │   ├── user/
-│   ├── cart/
-│   └── payment/
+│   │   ├── application/
+│   │   │   ├── dto/
+│   │   │   │   └── user_dto.go
+│   │   │   └── services/
+│   │   │       └── user_service.go
+│   │   ├── domain/
+│   │   │   ├── entities/
+│   │   │   │   └── user.go
+│   │   │   └── interfaces/
+│   │   │       ├── user_repository.go
+│   │   │       └── user_service.go
+│   │   └── infrastructure/
+│   │       ├── di/
+│   │       │   └── wire.go
+│   │       ├── query/
+│   │       │   ├── gen/
+│   │       │   └── user.sql
+│   │       ├── repositories/
+│   │       │   └── user_repository.go
+│   │       └── rest/
+│   │           └── user_handler.go
+│   ├── product/
+│   │   └── ...
+│   └── order/
+│       └── ...
 ├── shared/                   # Shared packages giữa các services
 │   ├── common/              # Common utilities & helpers
-│   └── messaging/
-│       └── nats/
 ├── plugins/                  # Component packages
-│   ├── cache/
-│   │   └── redis/
 │   ├── database/
 │   │   └── postgres/
-│   └── queue/
-│       └── nats/
-└── deploy/                   # Deployment configurations
-    ├── docker/
-    └── k8s/
+├── go.mod
+├── go.sum
+├── docker-compose.yml
+├── sqlc.yaml
+├── Makefile
+└── prismas/ # migrations
 ```
 
-## Layer Architecture
+### Database Schema
+```sql
+-- Users
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-Mỗi service được tổ chức theo Clean Architecture với các layer:
+-- Products
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-### 1. Domain Layer (`internal/domain/`)
-- **Entities**: Business objects và logic
-- **Interfaces**: Định nghĩa contracts cho repositories và services
-- Không phụ thuộc vào bất kỳ layer nào khác
+-- Orders
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    total_amount DECIMAL(10,2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-### 2. Application Layer (`internal/application/`)
-- **DTOs**: Data Transfer Objects
-- **Services**: Implementation của business use cases
-- Chỉ phụ thuộc vào Domain layer
-
-### 3. Infrastructure Layer (`internal/infrastructure/`)
-- **Repositories**: Database implementations
-- **Transport**: gRPC và REST handlers
-- **DI**: Dependency injection configuration
-- **Query**: SQL queries và generated code
-
-## Shared Packages (`shared/`)
-Chứa các package dùng chung giữa các services:
-- **common**: Utilities và helpers
-- **messaging**: Message broker implementations
-
-## Plugins (`plugins/`)
-Chứa các implementation của third-party components:
-- **cache**: Redis implementations
-- **database**: Database drivers và config
-- **queue**: Message queue implementations
-
-### schema
-```prisma
-// User Service
-model User {
-  id        Int      @id @default(autoincrement()) @map("id")
-  userId    String   @unique @map("user_id")
-  email     String   @unique @map("email")
-  password  String   @map("password")
-  fullName  String   @map("full_name")
-  role      String   @default("USER") @map("role")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([email])
-  @@map("users")
-}
-
-// Product Service
-model Product {
-  id          Int      @id @default(autoincrement()) @map("id")
-  productId   String   @unique @map("product_id")
-  name        String   @map("name")
-  description String?  @map("description")
-  price       Float    @map("price")
-  images      String[] @map("images")
-  categoryId  Int      @map("category_id")
-  category    Category @relation(fields: [categoryId], references: [id])
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@index([categoryId])
-  @@map("products")
-}
-
-model Category {
-  id        Int       @id @default(autoincrement()) @map("id")
-  categoryId String   @unique @map("category_id")
-  name      String   @map("name")
-  products  Product[]
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("categories")
-}
-
-// Cart Service
-model Cart {
-  id        Int        @id @default(autoincrement()) @map("id")
-  cartId    String     @unique @map("cart_id")
-  userId    String     @map("user_id")
-  status    String     @default("ACTIVE") @map("status")
-  items     CartItem[]
-
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-
-  @@index([userId, status])
-  @@map("carts")
-}
-
-model CartItem {
-  id        Int      @id @default(autoincrement()) @map("id")
-  itemId    String   @unique @map("item_id")
-  cartId    Int      @map("cart_id")
-  cart      Cart     @relation(fields: [cartId], references: [id])
-  productId String   @map("product_id")
-  quantity  Int      @map("quantity")
-  price     Float    @map("price")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([cartId])
-  @@map("cart_items")
-}
-
-// Order Service
-model Order {
-  id              Int         @id @default(autoincrement()) @map("id")
-  orderId         String      @unique @map("order_id")
-  userId          String      @map("user_id")
-  status          String      @default("PENDING") @map("status")
-  totalAmount     Float       @map("total_amount")
-  paymentStatus   String      @default("PENDING") @map("payment_status")
-  shippingAddress String?     @map("shipping_address")
-  items           OrderItem[]
-
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-
-  @@index([userId, status, createdAt(sort: Desc)])
-  @@map("orders")
-}
-
-model OrderItem {
-  id        Int      @id @default(autoincrement()) @map("id")
-  itemId    String   @unique @map("item_id")
-  orderId   Int      @map("order_id")
-  order     Order    @relation(fields: [orderId], references: [id])
-  productId String   @map("product_id")
-  quantity  Int      @map("quantity")
-  price     Float    @map("price")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([orderId])
-  @@map("order_items")
-}
-
-// Inventory Service
-model Inventory {
-  id         Int      @id @default(autoincrement()) @map("id")
-  inventoryId String  @unique @map("inventory_id")
-  productId  String   @unique @map("product_id")
-  stock      Int      @default(0) @map("stock")
-
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  @@index([productId])
-  @@map("inventory")
-}
-
-model StockReservation {
-  id            Int      @id @default(autoincrement()) @map("id")
-  reservationId String   @unique @map("reservation_id")
-  productId     String   @map("product_id")
-  quantity      Int      @map("quantity")
-  status        String   @default("PENDING") @map("status")
-  expireAt      DateTime @map("expire_at")
-
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  @@index([productId, status])
-  @@map("stock_reservations")
-}
-
-// Payment Service
-model Payment {
-  id          Int      @id @default(autoincrement()) @map("id")
-  paymentId   String   @unique @map("payment_id")
-  orderId     String   @unique @map("order_id")
-  amount      Float    @map("amount")
-  status      String   @default("PENDING") @map("status")
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@index([orderId, status])
-  @@map("payments")
-}
+CREATE TABLE order_items (
+    id SERIAL PRIMARY KEY,
+    order_id INT REFERENCES orders(id),
+    product_id INT REFERENCES products(id),
+    quantity INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL
+);
 ```
 
-## Development Setup
+### API Endpoints
 
-### Prerequisites
+```
+# User APIs
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+GET  /api/v1/users/me
+
+# Product APIs
+GET  /api/v1/products
+GET  /api/v1/products/{id}
+GET  /api/v1/products/search
+
+# Order APIs
+GET  /api/v1/cart
+POST /api/v1/cart/items
+POST /api/v1/orders
+GET  /api/v1/orders
+GET  /api/v1/orders/{id}
+```
+
+### Development Setup
+
+1. Prerequisites:
+```bash
+# Cần cài đặt
 - Go 1.22+
 - Docker & Docker Compose
-- Protocol Buffers compiler
-- buf CLI
-- Make
+- Make (optional)
+```
 
-### Docker Compose Configuration
+2. Quick Start:
+```bash
+# Clone project
+git clone [your-repo]
 
+# Start database
+docker-compose up -d
+
+# Run server
+go run cmd/server/main.go
+```
+
+3. Docker Compose Basic:
 ```yaml
 version: '3.8'
-
 services:
-  traefik:
-    image: traefik:v2.10
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.grpc.address=:50051"
-    ports:
-      - "80:80"
-      - "8080:8080"  # Dashboard
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik.yml:/etc/traefik/traefik.yml:ro
-
-  user-service:
-    build: ./services/user
-    ports:
-      - "8081:8080"  # REST
-      - "9001:9001"  # gRPC
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.user.rule=Host(`api.localhost`) && PathPrefix(`/api/v1/auth`, `/api/v1/users`)"
-      - "traefik.http.services.user.loadbalancer.server.port=8080"
-    depends_on:
-      - postgres
-      - redis
-      - nats
-
-  product-service:
-    build: ./services/product
-    ports:
-      - "8082:8080"  # REST
-      - "9002:9001"  # gRPC
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.product.rule=Host(`api.localhost`) && PathPrefix(`/api/v1/products`)"
-      - "traefik.http.services.product.loadbalancer.server.port=8080"
-
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: mallbots
-      POSTGRES_PASSWORD: mallbots
-      POSTGRES_DB: mallbots
+      POSTGRES_USER: ecommerce
+      POSTGRES_PASSWORD: ecommerce
+      POSTGRES_DB: ecommerce
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
 
   redis:
     image: redis:alpine
     ports:
       - "6379:6379"
 
-  nats:
-    image: nats:latest
-    command:
-      - "--js"
-    ports:
-      - "4222:4222"
-      - "8222:8222"
-
 volumes:
-  postgres_data:
+  pgdata:
 ```
 
-### Traefik Configuration
+## Phase 2: Kế hoạch mở rộng (Sau 1-2 tháng)
 
-```yaml
-# traefik.yml
-api:
-  dashboard: true
+1. Tách services:
+- Tách thành 3 service riêng biệt
+- Thêm message queue (NATS)
+- Thêm API Gateway
 
-log:
-  level: INFO
+2. Thêm tính năng:
+- Quản lý inventory
+- Thanh toán
+- Thông báo
+- Admin dashboard
 
-entryPoints:
-  web:
-    address: ":80"
-  grpc:
-    address: ":50051"
-
-providers:
-  docker:
-    endpoint: "unix:///var/run/docker.sock"
-    exposedByDefault: false
-
-http:
-  routers:
-    public-api:
-      rule: "Host(`api.localhost`)"
-      service: public-api
-      middlewares:
-        - jwt-auth
-
-    admin-api:
-      rule: "Host(`admin.localhost`)"
-      service: admin-api
-      middlewares:
-        - admin-auth
-
-  middlewares:
-    jwt-auth:
-      jwt:
-        secret: "${JWT_SECRET}"
-
-    admin-auth:
-      jwt:
-        secret: "${JWT_SECRET}"
-      forwardAuth:
-        address: "http://user-service:8080/api/v1/auth/verify-admin"
-```
-
-## Security
-
-### Admin Authentication
-- JWT với role-based access control
-- Middleware verify admin role
-- Rate limiting cho admin APIs
-
-### Installation & Setup
-```bash
-# Clone repository
-git clone [repository-url]
-
-# Install tools
-make install-tools
-
-# Start all services
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
-
-### Local Development Testing
-```bash
-# Test REST APIs
-curl -X POST http://api.localhost/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com", "password": "test123"}'
-
-# Test gRPC (using grpcurl)
-grpcurl -plaintext \
-  -d '{"email": "test@example.com", "password": "test123"}' \
-  localhost:9001 user.UserService/Login
-```
-
-## Monitoring & Security
-
-### Authentication
-JWT authentication thông qua Traefik middleware:
-```yaml
-jwt-auth:
-  jwt:
-    secret: "${JWT_SECRET}"
-```
-
-### Rate Limiting
-```yaml
-rate-limit:
-  rateLimit:
-    average: 100
-    burst: 50
-```
-
-### Monitoring
-- Prometheus metrics
-- Grafana dashboards
-- Jaeger tracing
-- ELK stack for logging
+3. Cải thiện infrastructure:
+- Container orchestration
+- Monitoring
+- CI/CD
 
 ## Contributing
-
-1. Fork repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add some amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Create Pull Request
+1. Fork project
+2. Tạo feature branch
+3. Commit changes
+4. Push và tạo Pull Request
 
 ## License
-
 MIT License
