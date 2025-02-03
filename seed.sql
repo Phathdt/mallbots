@@ -48,7 +48,7 @@ INSERT INTO products (name, description, price, category_id, created_at, updated
     -- Cameras
     ('Sony A7 IV', 'Full-frame mirrorless camera', 2499.99, 8, NOW(), NOW()),
     ('Canon EOS R6', 'Professional mirrorless camera', 2299.99, 8, NOW(), NOW()),
-    ('DJI Air 3', 'Premium consumer drone with 4K camera', 999.99, 8, NOW(), NOW());
+    ('DJI Air 3', 'Premium consumer drone with 4K camera', 1999.99, 8, NOW(), NOW());
 
 -- Example of how to verify the seed
 -- SELECT c.name as category, COUNT(p.id) as product_count
