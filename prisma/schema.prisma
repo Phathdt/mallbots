@@ -5,11 +5,9 @@ datasource db {
 
 model Product {
   id          Int      @id @default(autoincrement()) @map("id")
-  productId   String   @unique @map("product_id")
   name        String   @map("name")
   description String?  @map("description")
   price       Float    @map("price")
-  images      String[] @map("images")
   categoryId  Int      @map("category_id")
   category    Category @relation(fields: [categoryId], references: [id])
 
@@ -21,13 +19,12 @@ model Product {
 }
 
 model Category {
-  id         Int       @id @default(autoincrement()) @map("id")
-  categoryId String    @unique @map("category_id")
-  name       String    @map("name")
-  products   Product[]
+  id   Int    @id @default(autoincrement()) @map("id")
+  name String @map("name")
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  Product   Product[]
 
   @@map("categories")
 }
