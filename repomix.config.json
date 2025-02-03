@@ -13,6 +13,7 @@
     "useGitignore": true,
     "useDefaultPatterns": true,
     "customPatterns": [
+      "**/*.md",
       "./prisma/migrations/",
       "**/*_test.go",
       "schema.gen.sql",

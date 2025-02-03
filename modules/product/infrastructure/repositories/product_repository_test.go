@@ -150,10 +150,6 @@ func TestGetProducts(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			products, err := repo.GetProducts(context.Background(), tc.filter, tc.paging)
 
-			for _, product := range products {
-				fmt.Println(product.Name)
-				fmt.Println(product.ID)
-			}
 			require.NoError(t, err)
 			require.Len(t, products, tc.expectedLen)
 
