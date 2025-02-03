@@ -1,3 +1,5 @@
 /.env
 /config/config.yml
 /repomix-output.txt
+/bin
+/tmp

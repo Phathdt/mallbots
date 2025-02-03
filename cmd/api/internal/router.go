@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"log"
 	"log/slog"
+	"mallbots/modules/product/infrastructure/di"
+	"mallbots/plugins/pgxc"
+	"mallbots/shared/common"
 	"mallbots/shared/config"
 	"os"
 
@@ -14,6 +18,13 @@ import (
 )
 
 func StartRouter(sc sctx.ServiceContext, cfg *config.Config) {
+	dbPool := sc.MustGet(common.KeyPgx).(pgxc.PgxComp).GetConn()
+
+	productHandler, err := di.InitializeProductHandler(dbPool)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	app := fiber.New(fiber.Config{BodyLimit: 100 * 1024 * 1024})
 
 	app.Use(slogfiber.New(slog.New(slog.NewTextHandler(os.Stdout, nil))))
@@ -24,6 +35,8 @@ func StartRouter(sc sctx.ServiceContext, cfg *config.Config) {
 	app.Get("/", ping())
 
 	// Setup routes
+	app.Get("/v1/products", productHandler.GetProducts)
+	app.Get("/v1/products/:id", productHandler.GetProduct)
 
 	_ = app.Listen(":4000")
 }

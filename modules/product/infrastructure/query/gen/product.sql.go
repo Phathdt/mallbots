@@ -9,6 +9,34 @@ import (
 	"context"
 )
 
+const countProducts = `-- name: CountProducts :one
+SELECT COUNT(*) FROM products
+WHERE
+    (NULLIF(TRIM($1), '') IS NULL OR name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
+    AND ($2 = 0 OR category_id = $2)
+    AND ($3 = 0 OR price >= $3)
+    AND ($4 = 0 OR price <= $4)
+`
+
+type CountProductsParams struct {
+	Btrim   string      `db:"btrim" json:"btrim"`
+	Column2 interface{} `db:"column_2" json:"column_2"`
+	Column3 interface{} `db:"column_3" json:"column_3"`
+	Column4 interface{} `db:"column_4" json:"column_4"`
+}
+
+func (q *Queries) CountProducts(ctx context.Context, arg CountProductsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countProducts,
+		arg.Btrim,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createProduct = `-- name: CreateProduct :one
 INSERT INTO products (
     name,
@@ -153,37 +181,33 @@ func (q *Queries) GetProduct(ctx context.Context, id int32) (*Product, error) {
 const getProducts = `-- name: GetProducts :many
 SELECT id, name, description, price, category_id, created_at, updated_at FROM products
 WHERE
-    ($1::text IS NULL OR name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
-    AND ($2::int IS NULL OR category_id = $2)
-    AND ($3::float IS NULL OR price >= $3)
-    AND ($4::float IS NULL OR price <= $4)
+    (NULLIF(TRIM($1), '') IS NULL OR name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
+    AND ($2 = 0 OR category_id = $2)
+    AND ($3 = 0 OR price >= $3)
+    AND ($4 = 0 OR price <= $4)
 ORDER BY
     CASE $5::text
         WHEN 'price_asc' THEN price
-        WHEN 'price_desc' THEN price
-        WHEN 'latest' THEN extract(epoch from created_at)
-        ELSE extract(epoch from created_at)
-    END DESC,
-    CASE $5::text
-        WHEN 'price_asc' THEN id
-        ELSE id
-    END DESC
+        WHEN 'price_desc' THEN price * -1
+        ELSE extract(epoch from created_at) * -1
+    END,
+    id DESC
 LIMIT $6 OFFSET $7
 `
 
 type GetProductsParams struct {
-	Column1 string  `db:"column_1" json:"column_1"`
-	Column2 int32   `db:"column_2" json:"column_2"`
-	Column3 float64 `db:"column_3" json:"column_3"`
-	Column4 float64 `db:"column_4" json:"column_4"`
-	Column5 string  `db:"column_5" json:"column_5"`
-	Limit   int32   `db:"limit" json:"limit"`
-	Offset  int32   `db:"offset" json:"offset"`
+	Btrim   string      `db:"btrim" json:"btrim"`
+	Column2 interface{} `db:"column_2" json:"column_2"`
+	Column3 interface{} `db:"column_3" json:"column_3"`
+	Column4 interface{} `db:"column_4" json:"column_4"`
+	Column5 string      `db:"column_5" json:"column_5"`
+	Limit   int32       `db:"limit" json:"limit"`
+	Offset  int32       `db:"offset" json:"offset"`
 }
 
 func (q *Queries) GetProducts(ctx context.Context, arg GetProductsParams) ([]*Product, error) {
 	rows, err := q.db.Query(ctx, getProducts,
-		arg.Column1,
+		arg.Btrim,
 		arg.Column2,
 		arg.Column3,
 		arg.Column4,

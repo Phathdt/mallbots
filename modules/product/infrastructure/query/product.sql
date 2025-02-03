@@ -13,24 +13,28 @@ INSERT INTO products (
 -- name: GetProduct :one
 SELECT * FROM products WHERE id = $1;
 
+-- name: CountProducts :one
+SELECT COUNT(*) FROM products
+WHERE
+    (NULLIF(TRIM($1), '') IS NULL OR name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
+    AND ($2 = 0 OR category_id = $2)
+    AND ($3 = 0 OR price >= $3)
+    AND ($4 = 0 OR price <= $4);
+
 -- name: GetProducts :many
 SELECT * FROM products
 WHERE
-    ($1::text IS NULL OR name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
-    AND ($2::int IS NULL OR category_id = $2)
-    AND ($3::float IS NULL OR price >= $3)
-    AND ($4::float IS NULL OR price <= $4)
+    (NULLIF(TRIM($1), '') IS NULL OR name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
+    AND ($2 = 0 OR category_id = $2)
+    AND ($3 = 0 OR price >= $3)
+    AND ($4 = 0 OR price <= $4)
 ORDER BY
     CASE $5::text
         WHEN 'price_asc' THEN price
-        WHEN 'price_desc' THEN price
-        WHEN 'latest' THEN extract(epoch from created_at)
-        ELSE extract(epoch from created_at)
-    END DESC,
-    CASE $5::text
-        WHEN 'price_asc' THEN id
-        ELSE id
-    END DESC
+        WHEN 'price_desc' THEN price * -1
+        ELSE extract(epoch from created_at) * -1
+    END,
+    id DESC
 LIMIT $6 OFFSET $7;
 
 -- name: GetCategory :one

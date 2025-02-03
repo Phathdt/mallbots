@@ -4,6 +4,9 @@
 BINARY_NAME=mallbots-api
 MAIN_PACKAGE=./cmd/api
 
+# Database seeding
+DB_DSN ?= $(shell grep DB_DSN .env | cut -d '=' -f2)
+
 # Tools installation
 install-tools:
 	@echo "Installing required tools..."
@@ -103,6 +106,16 @@ test-coverage:
 	go test  -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 
+seed-fresh: ## Clean and seed database with fresh data
+	@echo "Dropping all tables and seeding fresh data..."
+	psql $(DB_DSN) -c "DROP TABLE IF EXISTS products, categories CASCADE;"
+	psql $(DB_DSN) -f schema.gen.sql
+	psql $(DB_DSN) -f seed.sql
+
+seed: ## Seed additional data
+	@echo "Seeding data..."
+	psql $(DB_DSN) -f seed.sql
+
 # Help
 help:
 	@echo "Available commands:"
@@ -129,3 +142,6 @@ help:
 	@echo "  make prisma-db-push    - Push schema to database"
 	@echo "  make prisma-migrate-dev - Create new migration"
 	@echo "  make prisma-studio     - Open Prisma Studio"
+	@echo "Database:"
+	@echo "  make seed-fresh    - Drop all tables and seed fresh data"
+	@echo "  make seed         - Add seed data to existing tables"
