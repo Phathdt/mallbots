@@ -17,7 +17,8 @@
       "**/*_test.go",
       "schema.gen.sql",
       "config/config.yml",
-      "go.sum"
+      "go.sum",
+      "prisma/migrations"
     ]
   },
   "security": {
