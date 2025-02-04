@@ -115,44 +115,6 @@ func (s *orderService) GetUserOrders(ctx context.Context, userID int32, paging *
 	return responses, nil
 }
 
-func (s *orderService) UpdateOrderStatus(ctx context.Context, orderID int32, req *dto.UpdateOrderStatusRequest) error {
-	order, err := s.orderRepo.GetByID(ctx, orderID)
-	if err != nil {
-		return err
-	}
-
-	newStatus := constants.OrderStatus(req.Status)
-	if !newStatus.IsValid() {
-		return errorx.ErrInvalidOrderStatus
-	}
-
-	// Validate status transition
-	if !s.isValidStatusTransition(order.Status, newStatus) {
-		return errorx.ErrInvalidStatusTransition
-	}
-
-	return s.orderRepo.UpdateStatus(ctx, orderID, newStatus)
-}
-
-func (s *orderService) UpdatePaymentStatus(ctx context.Context, orderID int32, req *dto.UpdatePaymentStatusRequest) error {
-	order, err := s.orderRepo.GetByID(ctx, orderID)
-	if err != nil {
-		return err
-	}
-
-	newStatus := constants.PaymentStatus(req.PaymentStatus)
-	if !newStatus.IsValid() {
-		return errorx.ErrInvalidPaymentStatus
-	}
-
-	// Validate payment status transition
-	if !s.isValidPaymentStatusTransition(order.PaymentStatus, newStatus) {
-		return errorx.ErrInvalidPaymentStatusTransition
-	}
-
-	return s.orderRepo.UpdatePaymentStatus(ctx, orderID, newStatus)
-}
-
 func (s *orderService) convertToResponse(order *orderEntities.Order) *dto.OrderResponse {
 	var itemResponses []dto.OrderItemResponse
 	for _, item := range order.Items {
@@ -177,71 +139,4 @@ func (s *orderService) convertToResponse(order *orderEntities.Order) *dto.OrderR
 		CreatedAt:       order.CreatedAt,
 		UpdatedAt:       order.UpdatedAt,
 	}
-}
-
-func (s *orderService) isValidStatusTransition(current, new constants.OrderStatus) bool {
-	// Define valid status transitions
-	validTransitions := map[constants.OrderStatus][]constants.OrderStatus{
-		constants.OrderStatusPending: {
-			constants.OrderStatusConfirmed,
-			constants.OrderStatusCancelled,
-		},
-		constants.OrderStatusConfirmed: {
-			constants.OrderStatusProcessing,
-			constants.OrderStatusCancelled,
-		},
-		constants.OrderStatusProcessing: {
-			constants.OrderStatusShipped,
-		},
-		constants.OrderStatusShipped: {
-			constants.OrderStatusDelivered,
-		},
-		constants.OrderStatusDelivered: {
-			constants.OrderStatusRefunded,
-		},
-	}
-
-	// Check if the new status is allowed
-	allowedStatuses, exists := validTransitions[current]
-	if !exists {
-		return false
-	}
-
-	for _, status := range allowedStatuses {
-		if status == new {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (s *orderService) isValidPaymentStatusTransition(current, new constants.PaymentStatus) bool {
-	// Define valid payment status transitions
-	validTransitions := map[constants.PaymentStatus][]constants.PaymentStatus{
-		constants.PaymentStatusPending: {
-			constants.PaymentStatusPaid,
-			constants.PaymentStatusFailed,
-		},
-		constants.PaymentStatusPaid: {
-			constants.PaymentStatusRefunded,
-		},
-		constants.PaymentStatusFailed: {
-			constants.PaymentStatusPending,
-		},
-	}
-
-	// Check if the new status is allowed
-	allowedStatuses, exists := validTransitions[current]
-	if !exists {
-		return false
-	}
-
-	for _, status := range allowedStatuses {
-		if status == new {
-			return true
-		}
-	}
-
-	return false
 }

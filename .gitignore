@@ -4,3 +4,5 @@
 /bin
 /tmp
 /.idea
+/coverage.html
+/coverage.out
