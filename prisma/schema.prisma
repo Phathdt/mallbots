@@ -61,3 +61,37 @@ model CartItem {
   @@index([userId])
   @@map("cart_items")
 }
+
+model Order {
+  id            Int    @id @default(autoincrement())
+  userId        Int    @map("user_id")
+  status        String @default("PENDING")
+  paymentStatus String @default("PENDING") @map("payment_status")
+  totalAmount   Float  @map("total_amount")
+
+  // Shipping details
+  shippingAddress String @map("shipping_address")
+  shippingCity    String @map("shipping_city")
+  shippingCountry String @map("shipping_country")
+  shippingZip     String @map("shipping_zip")
+
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+  OrderItem OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int   @id @default(autoincrement())
+  orderId   Int   @map("order_id")
+  productId Int   @map("product_id")
+  quantity  Int
+  price     Float
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  Order     Order    @relation(fields: [orderId], references: [id])
+
+  @@map("order_items")
+}

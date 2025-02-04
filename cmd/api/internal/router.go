@@ -4,6 +4,7 @@ import (
 	"log"
 	"log/slog"
 	cartDi "mallbots/modules/cart/infrastructure/di"
+	orderDi "mallbots/modules/order/infrastructure/di"
 	productDi "mallbots/modules/product/infrastructure/di"
 	userDi "mallbots/modules/user/infrastructure/di"
 	"mallbots/plugins/pgxc"
@@ -41,6 +42,11 @@ func StartRouter(sc sctx.ServiceContext, cfg *config.Config) {
 		log.Fatal(err)
 	}
 
+	orderHandler, err := orderDi.InitializeOrderHandler(dbPool)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	app := fiber.New(fiber.Config{BodyLimit: 100 * 1024 * 1024})
 
 	app.Use(slogfiber.New(slog.New(slog.NewTextHandler(os.Stdout, nil))))
@@ -68,6 +74,11 @@ func StartRouter(sc sctx.ServiceContext, cfg *config.Config) {
 	app.Put("/v1/cart/items", cartHandler.UpdateQuantity)
 	app.Delete("/v1/cart/items/:productId", cartHandler.RemoveItem)
 	app.Get("/v1/cart/items", cartHandler.GetItems)
+
+	// Order routes
+	app.Post("/v1/orders", orderHandler.CreateOrder)
+	app.Get("/v1/orders", orderHandler.GetUserOrders)
+	app.Get("/v1/orders/:id", orderHandler.GetOrder)
 
 	_ = app.Listen(":4000")
 }
