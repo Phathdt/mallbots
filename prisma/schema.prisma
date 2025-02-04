@@ -11,8 +11,9 @@ model Product {
   categoryId  Int      @map("category_id")
   category    Category @relation(fields: [categoryId], references: [id])
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  CartItem  CartItem[]
 
   @@index([categoryId])
   @@map("products")
@@ -36,9 +37,27 @@ model User {
   fullName String @map("full_name")
   role     String @default("USER") @map("role")
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  CartItem  CartItem[]
 
   @@index([email])
   @@map("users")
+}
+
+model CartItem {
+  id        Int   @id @default(autoincrement()) @map("id")
+  userId    Int   @map("user_id")
+  productId Int   @map("product_id")
+  quantity  Int   @map("quantity")
+  price     Float @map("price")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("cart_items")
 }
