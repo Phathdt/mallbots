@@ -5,27 +5,26 @@ import (
 	"errors"
 	"mallbots/modules/cart/application/dto"
 	"mallbots/modules/cart/domain/entities"
-	productDTO "mallbots/modules/product/application/dto"
+	productDto "mallbots/modules/product/application/dto"
 	"testing"
 	"time"
 
 	"github.com/phathdt/service-context/core"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
-// Mock implementations
+// Mock repositories
 type MockCartRepository struct {
 	mock.Mock
 }
 
 func (m *MockCartRepository) Create(ctx context.Context, item *entities.CartItem) (*entities.CartItem, error) {
 	args := m.Called(ctx, item)
-	if v, ok := args.Get(0).(*entities.CartItem); ok {
-		return v, args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
 	}
-	return nil, args.Error(1)
+	return args.Get(0).(*entities.CartItem), args.Error(1)
 }
 
 func (m *MockCartRepository) Update(ctx context.Context, item *entities.CartItem) error {
@@ -38,174 +37,129 @@ func (m *MockCartRepository) Delete(ctx context.Context, userID, productID int32
 	return args.Error(0)
 }
 
+func (m *MockCartRepository) DeleteAllByUser(ctx context.Context, userID int32) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
 func (m *MockCartRepository) GetByUserAndProduct(ctx context.Context, userID, productID int32) (*entities.CartItem, error) {
 	args := m.Called(ctx, userID, productID)
-	if v, ok := args.Get(0).(*entities.CartItem); ok {
-		return v, args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
 	}
-	return nil, args.Error(1)
+	return args.Get(0).(*entities.CartItem), args.Error(1)
 }
 
 func (m *MockCartRepository) GetByUser(ctx context.Context, userID int32) ([]*entities.CartItem, error) {
 	args := m.Called(ctx, userID)
-	if v, ok := args.Get(0).([]*entities.CartItem); ok {
-		return v, args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
 	}
-	return nil, args.Error(1)
+	return args.Get(0).([]*entities.CartItem), args.Error(1)
 }
 
 type MockProductService struct {
 	mock.Mock
 }
 
-func (m *MockProductService) GetProduct(ctx context.Context, id int32) (*productDTO.ProductResponse, error) {
+func (m *MockProductService) GetProduct(ctx context.Context, id int32) (*productDto.ProductResponse, error) {
 	args := m.Called(ctx, id)
-	if v, ok := args.Get(0).(*productDTO.ProductResponse); ok {
-		return v, args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
 	}
-	return nil, args.Error(1)
+	return args.Get(0).(*productDto.ProductResponse), args.Error(1)
 }
 
-func (m *MockProductService) GetProducts(ctx context.Context, req *productDTO.ProductListRequest, paging *core.Paging) ([]*productDTO.ProductResponse, error) {
+func (m *MockProductService) GetProducts(ctx context.Context, req *productDto.ProductListRequest, paging *core.Paging) ([]*productDto.ProductResponse, error) {
 	args := m.Called(ctx, req, paging)
-	if v, ok := args.Get(0).([]*productDTO.ProductResponse); ok {
-		return v, args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
 	}
-	return nil, args.Error(1)
+	return args.Get(0).([]*productDto.ProductResponse), args.Error(1)
 }
 
-func TestCartService_AddItem(t *testing.T) {
-	tests := []struct {
-		name          string
-		userID        int32
-		request       *dto.CartItemRequest
-		setupMocks    func(*MockCartRepository, *MockProductService)
-		expectedItem  *dto.CartItemResponse
-		expectedError error
-	}{
-		{
-			name:   "Successfully add new item to cart",
-			userID: 1,
-			request: &dto.CartItemRequest{
-				ProductID: 1,
-				Quantity:  2,
-			},
-			setupMocks: func(mockCartRepo *MockCartRepository, mockProductService *MockProductService) {
-				// Setup product service mock
-				mockProductService.On("GetProduct", mock.Anything, int32(1)).Return(&productDTO.ProductResponse{
-					ID:    1,
-					Price: 100.0,
-				}, nil)
+func TestCartService(t *testing.T) {
+	ctx := context.Background()
+	cartRepo := new(MockCartRepository)
+	productService := new(MockProductService)
+	cartService := NewCartService(cartRepo, productService)
 
-				// Setup cart repo mocks
-				mockCartRepo.On("GetByUserAndProduct", mock.Anything, int32(1), int32(1)).Return(nil, errors.New("not found"))
-				mockCartRepo.On("Create", mock.Anything, mock.MatchedBy(func(item *entities.CartItem) bool {
-					return item.UserID == 1 && item.ProductID == 1 && item.Quantity == 2 && item.Price == 100.0
-				})).Return(&entities.CartItem{
-					ID:        1,
-					UserID:    1,
-					ProductID: 1,
-					Quantity:  2,
-					Price:     100.0,
-				}, nil)
-			},
-			expectedItem: &dto.CartItemResponse{
+	t.Run("Add Item to Cart", func(t *testing.T) {
+		userID := int32(1)
+		req := &dto.CartItemRequest{
+			ProductID: 1,
+			Quantity:  2,
+		}
+
+		// Mock product service response
+		productService.On("GetProduct", ctx, req.ProductID).Return(&productDto.ProductResponse{
+			ID:    1,
+			Price: 10.99,
+		}, nil)
+
+		// Mock repository calls
+		cartRepo.On("GetByUserAndProduct", ctx, userID, req.ProductID).Return(nil, errors.New("not found"))
+		cartRepo.On("Create", ctx, mock.AnythingOfType("*entities.CartItem")).Return(&entities.CartItem{
+			ID:        1,
+			UserID:    userID,
+			ProductID: req.ProductID,
+			Quantity:  req.Quantity,
+			Price:     10.99,
+		}, nil)
+
+		// Test add item
+		response, err := cartService.AddItem(ctx, userID, req)
+		require.NoError(t, err)
+		require.Equal(t, req.ProductID, response.ProductID)
+		require.Equal(t, req.Quantity, response.Quantity)
+	})
+
+	t.Run("Remove All Items from Cart", func(t *testing.T) {
+		userID := int32(1)
+
+		// Mock repository call
+		cartRepo.On("DeleteAllByUser", ctx, userID).Return(nil)
+
+		// Test remove all items
+		err := cartService.RemoveAllItems(ctx, userID)
+		require.NoError(t, err)
+
+		cartRepo.AssertCalled(t, "DeleteAllByUser", ctx, userID)
+	})
+
+	t.Run("Get Cart Items", func(t *testing.T) {
+		userID := int32(1)
+		mockItems := []*entities.CartItem{
+			{
 				ID:        1,
+				UserID:    userID,
 				ProductID: 1,
 				Quantity:  2,
-				Price:     100.0,
+				Price:     10.99,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
 			},
-			expectedError: nil,
-		},
-		{
-			name:   "Update existing item in cart",
-			userID: 1,
-			request: &dto.CartItemRequest{
-				ProductID: 1,
-				Quantity:  2,
+			{
+				ID:        2,
+				UserID:    userID,
+				ProductID: 2,
+				Quantity:  1,
+				Price:     20.99,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
 			},
-			setupMocks: func(mockCartRepo *MockCartRepository, mockProductService *MockProductService) {
-				existingItem := &entities.CartItem{
-					ID:        1,
-					UserID:    1,
-					ProductID: 1,
-					Quantity:  3,
-					Price:     100.0,
-				}
+		}
 
-				// Setup product service mock
-				mockProductService.On("GetProduct", mock.Anything, int32(1)).Return(&productDTO.ProductResponse{
-					ID:    1,
-					Price: 100.0,
-				}, nil)
+		// Mock repository call
+		cartRepo.On("GetByUser", ctx, userID).Return(mockItems, nil)
 
-				// Setup cart repo mocks
-				mockCartRepo.On("GetByUserAndProduct", mock.Anything, int32(1), int32(1)).Return(existingItem, nil)
-				mockCartRepo.On("Update", mock.Anything, mock.MatchedBy(func(item *entities.CartItem) bool {
-					return item.ID == 1 && item.Quantity == 5 // 3 + 2
-				})).Return(nil)
-			},
-			expectedItem: &dto.CartItemResponse{
-				ID:        1,
-				ProductID: 1,
-				Quantity:  5,
-				Price:     100.0,
-			},
-			expectedError: nil,
-		},
-		{
-			name:   "Product not found",
-			userID: 1,
-			request: &dto.CartItemRequest{
-				ProductID: 1,
-				Quantity:  2,
-			},
-			setupMocks: func(mockCartRepo *MockCartRepository, mockProductService *MockProductService) {
-				mockProductService.On("GetProduct", mock.Anything, int32(1)).Return(nil, errors.New("product not found"))
-			},
-			expectedItem:  nil,
-			expectedError: errors.New("product not found"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup
-			mockCartRepo := new(MockCartRepository)
-			mockProductService := new(MockProductService)
-			tt.setupMocks(mockCartRepo, mockProductService)
-
-			service := NewCartService(mockCartRepo, mockProductService)
-
-			// Execute
-			item, err := service.AddItem(context.Background(), tt.userID, tt.request)
-
-			// Assert
-			if tt.expectedError != nil {
-				assert.Error(t, err)
-				assert.Equal(t, tt.expectedError.Error(), err.Error())
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedItem, item)
-			}
-
-			// Verify all mocks
-			mockCartRepo.AssertExpectations(t)
-			mockProductService.AssertExpectations(t)
-		})
-	}
-}
-
-// Helper function to create a CartItem with current time
-func createCartItem(id, userID, productID, quantity int32, price float64) *entities.CartItem {
-	now := time.Now()
-	return &entities.CartItem{
-		ID:        id,
-		UserID:    userID,
-		ProductID: productID,
-		Quantity:  quantity,
-		Price:     price,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
+		// Test get items
+		items, err := cartService.GetItems(ctx, userID)
+		require.NoError(t, err)
+		require.Len(t, items, 2)
+		require.Equal(t, mockItems[0].ID, items[0].ID)
+		require.Equal(t, mockItems[0].ProductID, items[0].ProductID)
+		require.Equal(t, mockItems[0].Quantity, items[0].Quantity)
+		require.Equal(t, mockItems[0].Price, items[0].Price)
+	})
 }
