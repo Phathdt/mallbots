@@ -108,3 +108,8 @@ func (r *cartRepository) GetByUser(ctx context.Context, userID int32) ([]*entiti
 
 	return items, nil
 }
+
+func (r *cartRepository) DeleteAllByUser(ctx context.Context, userID int32) error {
+	queries := gen.New(r.db)
+	return queries.DeleteCartItemsByUser(ctx, userID)
+}

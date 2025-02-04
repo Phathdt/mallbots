@@ -10,6 +10,8 @@ import (
 	"mallbots/shared/errorx"
 	"time"
 
+	"fmt"
+
 	"github.com/phathdt/service-context/core"
 )
 
@@ -82,12 +84,8 @@ func (s *orderService) CreateOrder(ctx context.Context, userID int32, req *dto.C
 	}
 
 	// Clear cart after successful order creation
-	for _, item := range cartItems {
-		if err := s.cartService.RemoveItem(ctx, userID, item.ProductID); err != nil {
-			// Log error but don't fail the order creation
-			// TODO: Implement retry mechanism for cart cleanup
-			continue
-		}
+	if err := s.cartService.RemoveAllItems(ctx, userID); err != nil {
+		fmt.Printf("Failed to clear cart after order creation %+v\n", err)
 	}
 
 	newOrder.Items = orderItems

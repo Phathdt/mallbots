@@ -28,3 +28,7 @@ WHERE user_id = $1 AND product_id = $2;
 SELECT * FROM cart_items
 WHERE user_id = $1
 ORDER BY created_at DESC;
+
+-- name: DeleteCartItemsByUser :exec
+DELETE FROM cart_items
+WHERE user_id = $1;

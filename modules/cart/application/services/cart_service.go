@@ -116,3 +116,7 @@ func (s *cartService) GetItems(ctx context.Context, userID int32) ([]*dto.CartIt
 
 	return response, nil
 }
+
+func (s *cartService) RemoveAllItems(ctx context.Context, userID int32) error {
+	return s.cartRepo.DeleteAllByUser(ctx, userID)
+}
