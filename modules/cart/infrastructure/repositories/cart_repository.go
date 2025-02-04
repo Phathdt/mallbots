@@ -9,15 +9,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type cartItemRepository struct {
+type cartRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewCartItemRepository(db *pgxpool.Pool) interfaces.CartItemRepository {
-	return &cartItemRepository{db: db}
+func NewCartRepository(db *pgxpool.Pool) interfaces.CartRepository {
+	return &cartRepository{db: db}
 }
 
-func (r *cartItemRepository) Create(ctx context.Context, item *entities.CartItem) (*entities.CartItem, error) {
+func (r *cartRepository) Create(ctx context.Context, item *entities.CartItem) (*entities.CartItem, error) {
 	queries := gen.New(r.db)
 
 	dbItem, err := queries.CreateCartItem(ctx, gen.CreateCartItemParams{
@@ -43,7 +43,7 @@ func (r *cartItemRepository) Create(ctx context.Context, item *entities.CartItem
 	}, nil
 }
 
-func (r *cartItemRepository) Update(ctx context.Context, item *entities.CartItem) error {
+func (r *cartRepository) Update(ctx context.Context, item *entities.CartItem) error {
 	queries := gen.New(r.db)
 
 	return queries.UpdateCartItem(ctx, gen.UpdateCartItemParams{
@@ -54,7 +54,7 @@ func (r *cartItemRepository) Update(ctx context.Context, item *entities.CartItem
 	})
 }
 
-func (r *cartItemRepository) Delete(ctx context.Context, userID, productID int32) error {
+func (r *cartRepository) Delete(ctx context.Context, userID, productID int32) error {
 	queries := gen.New(r.db)
 
 	return queries.DeleteCartItem(ctx, gen.DeleteCartItemParams{
@@ -63,7 +63,7 @@ func (r *cartItemRepository) Delete(ctx context.Context, userID, productID int32
 	})
 }
 
-func (r *cartItemRepository) GetByUserAndProduct(ctx context.Context, userID, productID int32) (*entities.CartItem, error) {
+func (r *cartRepository) GetByUserAndProduct(ctx context.Context, userID, productID int32) (*entities.CartItem, error) {
 	queries := gen.New(r.db)
 
 	dbItem, err := queries.GetCartItem(ctx, gen.GetCartItemParams{
@@ -85,7 +85,7 @@ func (r *cartItemRepository) GetByUserAndProduct(ctx context.Context, userID, pr
 	}, nil
 }
 
-func (r *cartItemRepository) GetByUser(ctx context.Context, userID int32) ([]*entities.CartItem, error) {
+func (r *cartRepository) GetByUser(ctx context.Context, userID int32) ([]*entities.CartItem, error) {
 	queries := gen.New(r.db)
 
 	dbItems, err := queries.GetCartItems(ctx, userID)

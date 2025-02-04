@@ -17,14 +17,14 @@ import (
 
 // Injectors from wire.go:
 
-func InitializeCartHandler(db *pgxpool.Pool) (*rest.CartItemHandler, error) {
-	cartItemRepository := repositories.NewCartItemRepository(db)
+func InitializeCartHandler(db *pgxpool.Pool) (*rest.CartHandler, error) {
+	cartRepository := repositories.NewCartRepository(db)
 	productRepository := repositories2.NewProductRepository(db)
-	cartItemService := services.NewCartItemService(cartItemRepository, productRepository)
-	cartItemHandler := rest.NewCartItemHandler(cartItemService)
-	return cartItemHandler, nil
+	cartService := services.NewCartService(cartRepository, productRepository)
+	cartHandler := rest.NewCartHandler(cartService)
+	return cartHandler, nil
 }
 
 // wire.go:
 
-var CartSet = wire.NewSet(repositories.NewCartItemRepository, repositories2.NewProductRepository, services.NewCartItemService, rest.NewCartItemHandler)
+var CartSet = wire.NewSet(repositories.NewCartRepository, repositories2.NewProductRepository, services.NewCartService, rest.NewCartHandler)

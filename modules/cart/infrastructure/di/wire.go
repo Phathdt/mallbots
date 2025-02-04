@@ -13,13 +13,13 @@ import (
 )
 
 var CartSet = wire.NewSet(
-	repositories.NewCartItemRepository,
+	repositories.NewCartRepository,
 	productRepo.NewProductRepository,
-	services.NewCartItemService,
-	rest.NewCartItemHandler,
+	services.NewCartService,
+	rest.NewCartHandler,
 )
 
-func InitializeCartHandler(db *pgxpool.Pool) (*rest.CartItemHandler, error) {
+func InitializeCartHandler(db *pgxpool.Pool) (*rest.CartHandler, error) {
 	wire.Build(CartSet)
-	return &rest.CartItemHandler{}, nil
+	return &rest.CartHandler{}, nil
 }

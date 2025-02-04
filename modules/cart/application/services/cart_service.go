@@ -9,22 +9,22 @@ import (
 	"time"
 )
 
-type cartItemService struct {
-	cartRepo    interfaces.CartItemRepository
+type cartService struct {
+	cartRepo    interfaces.CartRepository
 	productRepo productInterfaces.ProductRepository
 }
 
-func NewCartItemService(
-	cartRepo interfaces.CartItemRepository,
+func NewCartService(
+	cartRepo interfaces.CartRepository,
 	productRepo productInterfaces.ProductRepository,
-) interfaces.CartItemService {
-	return &cartItemService{
+) interfaces.CartService {
+	return &cartService{
 		cartRepo:    cartRepo,
 		productRepo: productRepo,
 	}
 }
 
-func (s *cartItemService) AddItem(ctx context.Context, userID int32, req *dto.CartItemRequest) (*dto.CartItemResponse, error) {
+func (s *cartService) AddItem(ctx context.Context, userID int32, req *dto.CartItemRequest) (*dto.CartItemResponse, error) {
 	// Get product to validate and get current price
 	product, err := s.productRepo.GetProduct(ctx, req.ProductID)
 	if err != nil {
@@ -73,7 +73,7 @@ func (s *cartItemService) AddItem(ctx context.Context, userID int32, req *dto.Ca
 	}, nil
 }
 
-func (s *cartItemService) UpdateQuantity(ctx context.Context, userID int32, req *dto.CartItemRequest) (*dto.CartItemResponse, error) {
+func (s *cartService) UpdateQuantity(ctx context.Context, userID int32, req *dto.CartItemRequest) (*dto.CartItemResponse, error) {
 	item, err := s.cartRepo.GetByUserAndProduct(ctx, userID, req.ProductID)
 	if err != nil {
 		return nil, err
@@ -94,11 +94,11 @@ func (s *cartItemService) UpdateQuantity(ctx context.Context, userID int32, req 
 	}, nil
 }
 
-func (s *cartItemService) RemoveItem(ctx context.Context, userID, productID int32) error {
+func (s *cartService) RemoveItem(ctx context.Context, userID, productID int32) error {
 	return s.cartRepo.Delete(ctx, userID, productID)
 }
 
-func (s *cartItemService) GetItems(ctx context.Context, userID int32) ([]*dto.CartItemResponse, error) {
+func (s *cartService) GetItems(ctx context.Context, userID int32) ([]*dto.CartItemResponse, error) {
 	items, err := s.cartRepo.GetByUser(ctx, userID)
 	if err != nil {
 		return nil, err

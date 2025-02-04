@@ -11,15 +11,15 @@ import (
 	"github.com/phathdt/service-context/core"
 )
 
-type CartItemHandler struct {
-	service interfaces.CartItemService
+type CartHandler struct {
+	service interfaces.CartService
 }
 
-func NewCartItemHandler(service interfaces.CartItemService) *CartItemHandler {
-	return &CartItemHandler{service: service}
+func NewCartHandler(service interfaces.CartService) *CartHandler {
+	return &CartHandler{service: service}
 }
 
-func (h *CartItemHandler) AddItem(c *fiber.Ctx) error {
+func (h *CartHandler) AddItem(c *fiber.Ctx) error {
 	var req dto.CartItemRequest
 	if err := c.BodyParser(&req); err != nil {
 		return err
@@ -39,7 +39,7 @@ func (h *CartItemHandler) AddItem(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).JSON(core.SimpleSuccessResponse(item))
 }
 
-func (h *CartItemHandler) UpdateQuantity(c *fiber.Ctx) error {
+func (h *CartHandler) UpdateQuantity(c *fiber.Ctx) error {
 	var req dto.CartItemRequest
 	if err := c.BodyParser(&req); err != nil {
 		return err
@@ -59,7 +59,7 @@ func (h *CartItemHandler) UpdateQuantity(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(core.SimpleSuccessResponse(item))
 }
 
-func (h *CartItemHandler) RemoveItem(c *fiber.Ctx) error {
+func (h *CartHandler) RemoveItem(c *fiber.Ctx) error {
 	userID := c.Context().UserValue("userId").(int32)
 	productID, err := strconv.Atoi(c.Params("productId"))
 	if err != nil {
@@ -73,7 +73,7 @@ func (h *CartItemHandler) RemoveItem(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(core.SimpleSuccessResponse(true))
 }
 
-func (h *CartItemHandler) GetItems(c *fiber.Ctx) error {
+func (h *CartHandler) GetItems(c *fiber.Ctx) error {
 	userID := c.Context().UserValue("userId").(int32)
 
 	items, err := h.service.GetItems(c.Context(), userID)
