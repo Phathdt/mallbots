@@ -9,9 +9,10 @@ package di
 import (
 	"github.com/google/wire"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"mallbots/modules/cart/application/services"
+	services2 "mallbots/modules/cart/application/services"
 	"mallbots/modules/cart/infrastructure/repositories"
 	"mallbots/modules/cart/infrastructure/rest"
+	"mallbots/modules/product/application/services"
 	repositories2 "mallbots/modules/product/infrastructure/repositories"
 )
 
@@ -20,11 +21,12 @@ import (
 func InitializeCartHandler(db *pgxpool.Pool) (*rest.CartHandler, error) {
 	cartRepository := repositories.NewCartRepository(db)
 	productRepository := repositories2.NewProductRepository(db)
-	cartService := services.NewCartService(cartRepository, productRepository)
+	productService := services.NewProductService(productRepository)
+	cartService := services2.NewCartService(cartRepository, productService)
 	cartHandler := rest.NewCartHandler(cartService)
 	return cartHandler, nil
 }
 
 // wire.go:
 
-var CartSet = wire.NewSet(repositories.NewCartRepository, repositories2.NewProductRepository, services.NewCartService, rest.NewCartHandler)
+var CartSet = wire.NewSet(repositories2.NewProductRepository, services.NewProductService, repositories.NewCartRepository, services2.NewCartService, rest.NewCartHandler)

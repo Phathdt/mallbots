@@ -10,23 +10,23 @@ import (
 )
 
 type cartService struct {
-	cartRepo    interfaces.CartRepository
-	productRepo productInterfaces.ProductRepository
+	cartRepo       interfaces.CartRepository
+	productService productInterfaces.ProductService
 }
 
 func NewCartService(
 	cartRepo interfaces.CartRepository,
-	productRepo productInterfaces.ProductRepository,
+	productService productInterfaces.ProductService,
 ) interfaces.CartService {
 	return &cartService{
-		cartRepo:    cartRepo,
-		productRepo: productRepo,
+		cartRepo:       cartRepo,
+		productService: productService,
 	}
 }
 
 func (s *cartService) AddItem(ctx context.Context, userID int32, req *dto.CartItemRequest) (*dto.CartItemResponse, error) {
 	// Get product to validate and get current price
-	product, err := s.productRepo.GetProduct(ctx, req.ProductID)
+	product, err := s.productService.GetProduct(ctx, req.ProductID)
 	if err != nil {
 		return nil, err
 	}
